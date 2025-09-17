@@ -8,7 +8,6 @@
 <style>
 /* ---------- Variables & General Styles ---------- */
 :root {
-  --max-width: 90%; /* Changed from 760px to 90% */
   --accent: #0A64A4;
   --muted: #6b7280;
   --bg: #f7f8fb;
@@ -28,15 +27,19 @@ body {
   color: #111827;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding: 28px;
+  padding-top: 28px;
+  padding-bottom: 28px;
   display: flex;
   align-items: flex-start;
   justify-content: center;
 }
 
 .container {
-  width: 100%;
-  max-width: var(--max-width); /* Now uses the new 90% variable */
+  width: 90%;
+  max-width: 900px;
+  box-sizing: border-box;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .card {
@@ -308,7 +311,7 @@ p.lead {
             <div><div class="label">IBM/Lenovo</div></div>
           </label>
           <label class="opt" tabindex="0">
-            <input type="checkbox" name="servers" value="Not interested" />
+            <input type="checkbox" name="servers" value="Not interested" data-skip-next="true" />
             <div><div class="label">Not interested in servers</div></div>
           </label>
         </div>
@@ -551,12 +554,25 @@ p.lead {
         alert('Please select at least one server type to continue.');
         return;
       }
+
+      // Check for 'Not interested in servers' and skip a step
+      const notInterestedInput = document.querySelector('input[value="Not interested"]');
+      if (notInterestedInput && notInterestedInput.checked) {
+        showStep(currentStep + 2, 'forward');
+        return;
+      }
     }
     showStep(currentStep + 1, 'forward');
   });
 
   backBtn.addEventListener('click', () => {
-    showStep(currentStep - 1, 'back');
+    // Check if the user is coming back from a skipped step
+    const notInterestedInput = document.querySelector('input[value="Not interested"]');
+    if (currentStep === 2 && notInterestedInput && notInterestedInput.checked) {
+      showStep(currentStep - 2, 'back');
+    } else {
+      showStep(currentStep - 1, 'back');
+    }
   });
 
   form.addEventListener('submit', function(ev) {
