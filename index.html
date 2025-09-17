@@ -466,50 +466,54 @@ p.lead {
   const submitBtn = document.getElementById('submitBtn');
   const thankYou = document.getElementById('thankYou');
   const progressBar = document.querySelector('.progress-fill');
-  const allQuestions = Array.from(document.querySelectorAll('.group'));
+  const allQuestionGroups = Array.from(document.querySelectorAll('.group'));
   
   let currentStep = 0;
 
-  // Function to find the tallest step and set the card height
-  function setFixedCardHeight() {
+  // Function to determine the card's height based on the tallest step
+  function setCardHeight() {
     let maxHeight = 0;
-    allQuestions.forEach(step => {
-      const stepClone = step.cloneNode(true);
-      stepClone.style.visibility = 'hidden';
-      stepClone.style.position = 'absolute';
-      stepClone.style.top = '0';
-      stepClone.style.left = '0';
-      document.body.appendChild(stepClone);
-      const height = stepClone.scrollHeight;
-      document.body.removeChild(stepClone);
+    allQuestionGroups.forEach(step => {
+      // Temporarily show and position the step to measure its height
+      step.style.position = 'absolute';
+      step.style.opacity = '0';
+      step.style.transform = 'none';
+      
+      const height = step.offsetHeight;
       if (height > maxHeight) {
         maxHeight = height;
       }
+      
+      // Reset the styles
+      step.style.position = '';
+      step.style.opacity = '';
+      step.style.transform = '';
     });
-    
-    // Add some padding to the height
+
     card.style.setProperty('--form-height', `${maxHeight + 110}px`);
   }
 
-  // Initial call to set height
-  setFixedCardHeight();
-  window.addEventListener('resize', setFixedCardHeight);
+  // Initial height setting and on window resize
+  setCardHeight();
+  window.addEventListener('resize', setCardHeight);
 
-  // Function to update the progress bar
+  // Updates the progress bar based on the current step
   function updateProgressBar() {
     const progress = (currentStep / (steps.length - 1)) * 100;
     progressBar.style.width = `${progress}%`;
   }
   
+  // Controls the step navigation and display
   function showStep(stepIndex, direction) {
     if (stepIndex < 0 || stepIndex >= steps.length) return;
 
     const oldStep = steps[currentStep];
     const newStep = steps[stepIndex];
 
-    // Remove all transition classes
+    // Reset classes on all steps
     steps.forEach(s => s.classList.remove('active', 'prev', 'next', 'fade-in', 'fade-out'));
 
+    // Apply directional classes for animation
     if (direction === 'forward') {
       oldStep.classList.add('prev');
       newStep.classList.add('next');
@@ -518,13 +522,15 @@ p.lead {
       newStep.classList.add('prev');
     }
 
-    // Force reflow to ensure transitions happen
+    // Force a reflow to ensure the transition is triggered
     void newStep.offsetWidth;
 
+    // Set the new active step
     newStep.classList.add('active', 'fade-in');
     
     currentStep = stepIndex;
 
+    // Update button visibility
     backBtn.style.display = currentStep > 0 ? 'block' : 'none';
     nextBtn.style.display = currentStep < steps.length - 1 ? 'block' : 'none';
     submitBtn.style.display = currentStep === steps.length - 1 ? 'block' : 'none';
@@ -532,10 +538,12 @@ p.lead {
     updateProgressBar();
   }
 
+  // Set initial step
   steps[0].classList.add('active');
   updateProgressBar();
 
   nextBtn.addEventListener('click', () => {
+    // Basic validation for the first step
     if (currentStep === 0) {
       const serverOptions = document.querySelectorAll('input[name="servers"]');
       const isServerSelected = Array.from(serverOptions).some(input => input.checked);
@@ -552,6 +560,7 @@ p.lead {
   });
 
   form.addEventListener('submit', function(ev) {
+    // Prevent default submission if no Mailchimp action URL is present
     const action = (form.getAttribute('action') || '').trim();
     if (!action) {
       ev.preventDefault();
@@ -563,40 +572,37 @@ p.lead {
     return true;
   });
 
-  const optLabels = Array.from(document.querySelectorAll('.opt'));
-  optLabels.forEach(label => {
-    const inp = label.querySelector('input');
-    if (!inp) return;
+  const allInputs = document.querySelectorAll('.opt input');
+  allInputs.forEach(input => {
+    const label = input.closest('label');
 
-    label.addEventListener('keydown', (ev) => {
-      if (ev.key === ' ' || ev.key === 'Enter') {
-        ev.preventDefault();
-        inp.click();
+    // Toggle selected class on click/change
+    input.addEventListener('change', () => {
+      if (input.type === 'radio') {
+        // Handle radio buttons to deselect others in the same group
+        document.querySelectorAll(`input[name="${input.name}"]`).forEach(radio => {
+          radio.closest('label').classList.remove('selected');
+        });
+        label.classList.add('selected');
+      } else {
+        label.classList.toggle('selected', input.checked);
       }
     });
 
-    function updateVisual() {
-      if (inp.type === 'checkbox' || inp.type === 'radio') {
-        if (inp.checked) label.classList.add('selected');
-        else label.classList.remove('selected');
-      }
-    }
-    updateVisual();
-
-    inp.addEventListener('change', () => {
-      updateVisual();
-      // Conditional logic for server models
-      if (inp.type === 'checkbox' && inp.name === 'servers') {
-        const target = inp.dataset.target;
-        if (target) {
-          const panel = document.querySelector(target);
+    // Handle conditional panel logic for server types
+    if (input.name === 'servers') {
+      input.addEventListener('change', () => {
+        const targetId = input.dataset.target;
+        if (targetId) {
+          const panel = document.querySelector(targetId);
           if (panel) {
-            panel.classList.toggle('open', inp.checked);
+            panel.classList.toggle('open', input.checked);
           }
         }
-      }
-    });
+      });
+    }
   });
+
 })();
 </script>
 </body>
