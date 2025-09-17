@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tailor Your Updates — Preferences</title>
+
+<!--
+  Single-file preferences form.
+  - UK English copy aimed at IT managers.
+  - Conditional fields appear when parent topics are selected.
+  - Animation on selection and between sections.
+  - Mailchimp integration: see the comments below and near the <form> tag.
+-->
+
+<style>
+  /* ---------- Basic layout (change in site CSS instead) ---------- */
+  :root{
+    --max-width:760px;
+    --accent:#0A64A4; /* change to match brand */
+    --muted:#6b7280;
+    --bg:#f7f8fb;
+    --card:#ffffff;
+    --radius:10px;
+    --transition:220ms cubic-bezier(.2,.9,.2,1);
+  }
+
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    background:linear-gradient(180deg,#f4f6fa,var(--bg));
+    color:#111827;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:28px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  .container{
+    width:100%;
+    max-width:var(--max-width);
+  }
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:22px;
+    box-shadow:0 8px 30px rgba(16,24,40,0.06);
+  }
+
+  h1{
+    margin:0 0 6px 0;
+    font-size:20px;
+    letter-spacing:-0.2px;
+  }
+  p.lead{
+    margin:0 0 18px 0;
+    color:var(--muted);
+    font-size:14px;
+  }
+
+  /* ---------- Question group ---------- */
+  .group{
+    border-top:1px solid #eef2f6;
+    padding:18px 0;
+  }
+  .group:first-of-type{border-top:0;padding-top:6px;}
+  .q{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .q h2{
+    margin:0;
+    font-size:15px;
+  }
+  .optional{
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  /* ---------- Checkbox grid ---------- */
+  .options{
+    margin-top:12px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:10px;
+  }
+
+  /* Custom checkbox look */
+  .opt {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px;
+    border-radius:8px;
+    cursor:pointer;
+    user-select:none;
+    transition:transform var(--transition), box-shadow var(--transition), background var(--transition);
+    border:1px solid #eef2f6;
+    background:#fff;
+    box-shadow:0 0 0 rgba(0,0,0,0);
+  }
+  .opt input{ /* keep native input for accessibility but hide visually */
+    position:absolute;clip:rect(0 0 0 0);height:1px;width:1px;margin:-1px;padding:0;border:0;overflow:hidden;
+  }
+  .opt .label{
+    font-size:14px;
+    color:#111827;
+  }
+  .opt .muted{
+    font-size:12px;
+    color:var(--muted);
+  }
+
+  /* selected state */
+  .opt.selected{
+    transform:translateY(-3px) scale(1.01);
+    box-shadow:0 6px 18px rgba(10,100,164,0.14);
+    border-color:rgba(10,100,164,0.14);
+    background:linear-gradient(180deg,rgba(10,100,164,0.03),#fff);
+  }
+
+  /* ---------- Conditional panels (expand/collapse) ---------- */
+  .panel {
+    overflow:hidden;
+    transition:max-height var(--transition), opacity var(--transition), transform var(--transition);
+    max-height:0;
+    opacity:0;
+    transform:translateY(-6px);
+  }
+  .panel.open{
+    max-height:1000px; /* large enough for content */
+    opacity:1;
+    transform:translateY(0);
+  }
+
+  /* ---------- Small controls ---------- */
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;}
+  .small{
+    padding:8px 12px;border-radius:8px;border:1px solid #e6eef8;background:#fff;font-size:13px;
+  }
+
+  /* ---------- Footer / submit ---------- */
+  .actions{
+    display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:12px;
+  }
+  .btn{
+    padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;
+    transition:transform var(--transition);
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{
+    background:transparent;color:var(--accent);border:1px solid rgba(10,100,164,0.12);
+  }
+
+  /* ---------- Small responsive tweaks ---------- */
+  @media (max-width:520px){
+    .options{grid-template-columns:repeat(2,1fr);}
+  }
+
+  /* ---------- Micro interaction: focus visible ---------- */
+  .opt:focus-within{
+    outline:3px solid rgba(10,100,164,0.08);
+  }
+
+  /* ---------- Thank you / confirmation ---------- */
+  .thanks{
+    padding:18px;border-radius:8px;background:#f1fbff;border:1px solid rgba(10,100,164,0.06);color:#05263b;margin-top:12px;
+    display:none;
+  }
+  .thanks.show{display:block;}
+
+  /* ---------- Helper (changeable) ---------- */
+  /* Change fonts, sizes, spacing and accent in :root or here */
+</style>
+</head>
+<body>
+  <div class="container">
+    <form id="prefsForm" class="card" method="POST" novalidate
+      <!--
+        MAILCHIMP INTEGRATION:
+        ----------------------
+        To connect this form to Mailchimp:
+        1) In your Mailchimp audience, go to "Signup forms" -> "Embedded forms".
+        2) Copy the <form> 'action' URL and paste it into this <form> tag (replace the current empty action).
+           Example: action="https://xxxx.usX.list-manage.com/subscribe/post?u=...&id=..."
+        3) Mailchimp expects certain field names (e.g. EMAIL). For custom merge-tags use the field 'name' attribute
+           set to the merge tag. For example: <input name="MMERGE1" ...> or <input name="FNAME" ...>.
+        4) Below, find the mapping of fields to Mailchimp-friendly hidden inputs.
+           - We create a hidden field 'PREFS_JSON' containing a compact JSON of their selections.
+             If Mailchimp doesn't accept large fields, map individual parts to your merge tags:
+             e.g. name="MC_SERVERS" value="HP ProLiant, Dell PowerEdge"
+        5) If you need server-generation split into separate merge tags, create hidden inputs and set their
+           'name' to your audience merge tag IDs.
+        6) Test by submitting the form after adding the action. Mailchimp typically returns a new page.
+      -->
+    action="" >
+      <h1>Tailor your updates</h1>
+      <p class="lead">Tick only what is relevant. Optional fields help us keep messages short and useful.</p>
+
+      <!-- ---------- 1: Top-level topics ---------- -->
+      <section class="group" aria-labelledby="q1">
+        <div class="q">
+          <h2 id="q1">What do you want updates on?</h2>
+          <div class="optional">Optional — tick all that apply</div>
+        </div>
+
+        <div class="options" role="group" aria-label="Topics">
+          <label class="opt" tabindex="0">
+            <input type="checkbox" name="topics" value="Servers" data-target="panel-servers" />
+            <div>
+              <div class="label">Servers</div>
+              <div class="muted">ProLiant, PowerEdge, ThinkSystem</div>
+            </div>
+          </label>
+
+          <label class="opt" tabindex="0">
+            <input type="checkbox" name="topics" value="Storage" data-target="panel-storage" />
+            <div>
+              <div class="label">Storage</div>
+              <div class="muted">SAN, DAS, 3PAR, Compellent</div>
+            </div>
+          </label>
+
+          <label class="opt" tabindex="0">
+            <input type="checkbox" name="topics" value="Networking" data-target="panel-networking" />
+            <div>
+              <div class="label">Networking</div>
+              <div class="muted">Switches, Routers, Firewalls</div>
+            </div>
+          </label>
+
+          <label class="opt" tabindex="0">
+            <input type="checkbox" name="topics" value="Components" data-target="panel-components" />
+            <div>
+              <div class="label">Components</div>
+              <div class="muted">RAM, CPUs, Drives, RAID</div>
+            </div>
+          </label>
+
+          <label class="opt" tabindex="0">
+            <input type="checkbox" name="topics" value="Devices" data-target="panel-devices" />
+            <div>
+              <div class="label">Systems & Devices</div>
+              <div class="muted">Workstations, Laptops, GPUs</div>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- ---------- Servers panel (conditional) ---------- -->
+      <section id="panel-servers" class="group panel" aria-hidden="true">
+        <div class="q">
+          <h2>Servers you run / follow <span class="optional"> (optional)</span></h2>
+          <div class="optional">Tick brand(s) then select generation</div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="options" role="group" aria-label="Server brands">
+            <!-- Brand checkboxes reveal generation controls -->
+            <label class="opt" tabindex="0">
+              <input type="checkbox" name="srv_brand" value="HP ProLiant" data-gen="hp-gen" />
+              <div>
+                <div class="label">HP ProLiant</div>
+                <div class="muted">Gen8 → Gen11</div>
+              </div>
+            </label>
+
+            <label class="opt" tabindex="0">
+              <input type="checkbox" name="srv_brand" value="Dell PowerEdge" data-gen="dell-gen" />
+              <div>
+                <div class="label">Dell PowerEdge</div>
+                <div class="muted">11th → 15th</div>
+              </div>
+            </label>
+
+            <label class="opt" tabindex="0">
+              <input type="checkbox" name="srv_brand" value="IBM/Lenovo" data-gen="lenovo-gen" />
+              <div>
+                <div class="label">IBM / Lenovo</div>
+                <div class="muted">xSeries & ThinkSystem</div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Per-brand generation controls (appear when that brand is checked) -->
+          <div id="hp-gen" class="panel" style="margin-top:12px" aria-hidden="true">
+            <div class="q"><h3 style="margin:0;font-size:14px">HP ProLiant generation</h3></div>
+            <div class="row" style="margin-top:10px">
+              <label class="opt small">
+                <input type="checkbox" name="hp_gen" value="Gen8" />
+                <div class="label">Gen8</div>
+              </label>
+              <label class="opt small">
+                <input type="checkbox" name="hp_gen" value="Gen9" />
+                <div class="label">Gen9</div>
+              </label>
+              <label class="opt small">
+                <input type="checkbox" name="hp_gen" value="Gen10" />
+                <div class="label">Gen10</div>
+              </label>
+              <label class="opt small">
+                <input type="checkbox" name="hp_gen" value="Gen11" />
+                <div class="label">Gen11</div>
+              </label>
+              <label class="opt small">
+                <input type="checkbox" name="hp_gen" value="Other/Not sure" />
+                <div class="label">Other / Not sure</div>
+              </label>
+            </div>
+          </div>
+
+          <div id="dell-gen" class="panel" style="margin-top:12px" aria-hidden="true">
+            <div class="q"><h3 style="margin:0;font-size:14px">Dell PowerEdge generation</h3></div>
+            <div class="row" style="margin-top:10px">
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="11th" /><div class="label">11th</div></label>
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="12th" /><div class="label">12th</div></label>
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="13th" /><div class="label">13th</div></label>
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="14th" /><div class="label">14th</div></label>
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="15th" /><div class="label">15th</div></label>
+              <label class="opt small"><input type="checkbox" name="dell_gen" value="Other/Not sure" /><div class="label">Other / Not sure</div></label>
+            </div>
+          </div>
+
+          <div id="lenovo-gen" class="panel" style="margin-top:12px" aria-hidden="true">
+            <div class="q"><h3 style="margin:0;font-size:14px">IBM / Lenovo models (optional)</h3></div>
+            <div class="row" style="margin-top:10px">
+              <label class="opt small"><input type="checkbox" name="lenovo_gen" value="xSeries (older)" /><div class="label">x3650 / x3550 etc.</div></label>
+              <label class="opt small"><input type="checkbox" name="lenovo_gen" value="ThinkSystem (SR series)" /><div class="label">ThinkSystem (SR)</div></label>
+              <label class="opt small"><input type="checkbox" name="lenovo_gen" value="Other/Not sure" /><div class="label">Other / Not sure</div></label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- Storage panel ---------- -->
+      <section id="panel-storage" class="group panel" aria-hidden="true">
+        <div class="q">
+          <h2>Storage systems <span class="optional"> (optional)</span></h2>
+          <div class="optional">Tick all that apply</div>
+        </div>
+
+        <div class="options" style="margin-top:10px" role="group" aria-label="Storage">
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="SAN Arrays" /><div><div class="label">SAN Arrays</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="DAS" /><div><div class="label">DAS (Direct Attached)</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="HPE 3PAR" /><div><div class="label">HPE 3PAR</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="Dell Compellent" /><div><div class="label">Dell Compellent</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="Dell EqualLogic" /><div><div class="label">Dell EqualLogic</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="HPE MSA" /><div><div class="label">HPE MSA</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="Tape" /><div><div class="label">Tape</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="storage" value="Other storage" /><div><div class="label">Other</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Networking panel ---------- -->
+      <section id="panel-networking" class="group panel" aria-hidden="true">
+        <div class="q">
+          <h2>Networking</h2>
+          <div class="optional">Optional</div>
+        </div>
+
+        <div class="options" style="margin-top:10px" role="group" aria-label="Networking">
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Switches" /><div><div class="label">Switches</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Routers" /><div><div class="label">Routers</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Firewalls" /><div><div class="label">Firewalls</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Network Cards/Adapters" /><div><div class="label">Network Cards / Adapters</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Fibre Channel" /><div><div class="label">Fibre Channel</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="networking" value="Other networking" /><div><div class="label">Other</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Components panel ---------- -->
+      <section id="panel-components" class="group panel" aria-hidden="true">
+        <div class="q"><h2>Components</h2><div class="optional">Optional</div></div>
+        <div class="options" style="margin-top:10px" role="group" aria-label="Components">
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Memory/RAM" /><div><div class="label">Memory / RAM</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Processors" /><div><div class="label">Processors</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Hard Drives" /><div><div class="label">Hard Drives</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="RAID Controllers" /><div><div class="label">RAID Controllers</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Power Supplies" /><div><div class="label">Power Supplies</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Rail Kits" /><div><div class="label">Rail Kits</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Other components" /><div><div class="label">Other</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Devices panel ---------- -->
+      <section id="panel-devices" class="group panel" aria-hidden="true">
+        <div class="q"><h2>Systems & devices</h2><div class="optional">Optional</div></div>
+        <div class="options" style="margin-top:10px" role="group" aria-label="Devices">
+          <label class="opt" tabindex="0"><input type="checkbox" name="devices" value="Workstations" /><div><div class="label">Workstations</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="devices" value="Desktops" /><div><div class="label">Desktops</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="devices" value="Laptops" /><div><div class="label">Laptops</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="devices" value="Graphics Cards" /><div><div class="label">Graphics Cards</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="devices" value="Other devices" /><div><div class="label">Other</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Applications ---------- -->
+      <section class="group" aria-labelledby="apps">
+        <div class="q">
+          <h2 id="apps">Applications you need to run</h2>
+          <div class="optional">Optional — helps us make comms relevant</div>
+        </div>
+
+        <div class="options" role="group" aria-label="Applications" style="margin-top:10px">
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="Virtualisation" /><div><div class="label">Virtualisation (VMware / Hyper-V)</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="Databases" /><div><div class="label">Databases (SQL, Oracle)</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="Backup/DR" /><div><div class="label">Backup / DR</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="HPC" /><div><div class="label">High-performance computing</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="File/Print" /><div><div class="label">File / Print</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="apps" value="Other apps" /><div><div class="label">Other</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Type of updates ---------- -->
+      <section class="group" aria-labelledby="updates">
+        <div class="q">
+          <h2 id="updates">Type of updates</h2>
+          <div class="optional">Optional</div>
+        </div>
+
+        <div class="options" role="group" aria-label="Update types" style="margin-top:10px">
+          <label class="opt" tabindex="0"><input type="checkbox" name="upd" value="New Products" /><div><div class="label">New Products</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="upd" value="Price Changes" /><div><div class="label">Price Changes</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="upd" value="Reviews & Tests" /><div><div class="label">Product tests & reviews</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="upd" value="Guides" /><div><div class="label">Guides / How-tos</div></div></label>
+          <label class="opt" tabindex="0"><input type="checkbox" name="upd" value="Configurations" /><div><div class="label">Configurations</div></div></label>
+        </div>
+      </section>
+
+      <!-- ---------- Planning info (optional) ---------- -->
+      <section class="group" aria-labelledby="plan">
+        <div class="q">
+          <h2 id="plan">Planning info <span class="optional"> (optional)</span></h2>
+          <div class="optional">Only used to send timely offers</div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="muted" style="font-size:13px;margin-bottom:8px">Next planned purchase</div>
+          <div class="row" role="group" aria-label="Next planned purchase">
+            <label class="opt small"><input type="radio" name="purchase_when" value="Under 3 months" /><div class="label">Within 3 months</div></label>
+            <label class="opt small"><input type="radio" name="purchase_when" value="3-6 months" /><div class="label">3–6 months</div></label>
+            <label class="opt small"><input type="radio" name="purchase_when" value="6+ months" /><div class="label">6+ months</div></label>
+            <label class="opt small"><input type="radio" name="purchase_when" value="Just browsing" /><div class="label">Just browsing</div></label>
+          </div>
+
+          <div class="muted" style="font-size:13px;margin:14px 0 8px 0">Typical budget</div>
+          <div class="row" role="group" aria-label="Budget range">
+            <label class="opt small"><input type="radio" name="budget" value="Under £5k" /><div class="label">Under £5k</div></label>
+            <label class="opt small"><input type="radio" name="budget" value="£5k-£20k" /><div class="label">£5k–£20k</div></label>
+            <label class="opt small"><input type="radio" name="budget" value="£20k+" /><div class="label">£20k+</div></label>
+            <label class="opt small"><input type="radio" name="budget" value="Not sure" /><div class="label">Not sure</div></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- Hidden inputs for Mailchimp mapping (edit as needed) ---------- -->
+      <!--
+        NOTES:
+        - If Mailchimp requires specific merge tag names, change the 'name' of these inputs.
+        - By default we include a compact JSON of the user's selections in 'PREFS_JSON'.
+          If your Mailchimp audience rejects large fields, break the JSON into separate merge tag inputs.
+      -->
+      <input type="hidden" name="PREFS_JSON" id="PREFS_JSON" value="" />
+
+      <!-- Example placeholders you may want to map to merge tags:
+           <input type="hidden" name="MC_SERVERS" id="MC_SERVERS" value="">
+           <input type="hidden" name="MC_STORAGE" id="MC_STORAGE" value="">
+      -->
+
+      <div class="actions" style="margin-top:18px">
+        <button type="submit" class="btn">Save preferences</button>
+        <button type="button" class="btn ghost" id="clearBtn">Clear</button>
+      </div>
+
+      <div class="thanks" id="thankYou" role="status" aria-live="polite">
+        Thanks — your preferences have been recorded.
+      </div>
+    </form>
+  </div>
+
+<script>
+/* --------------- Behaviour & logic ---------------
+   - Toggles .selected classes on label when the nested input is checked.
+   - Expands/collapses conditional panels for topics and server-generation.
+   - On submit: collects values into a compact JSON, stores it in hidden PREFS_JSON.
+   - If the form 'action' attribute is empty, submission is intercepted: JSON printed to console and a thank-you message shown.
+   - If you paste your Mailchimp 'action' URL into the <form action=""> attribute, the form will POST to Mailchimp.
+*/
+
+(function(){
+  const form = document.getElementById('prefsForm');
+  const optLabels = Array.from(document.querySelectorAll('.opt'));
+  const panels = document.querySelectorAll('.panel');
+  const prefHidden = document.getElementById('PREFS_JSON');
+  const thankYou = document.getElementById('thankYou');
+  const clearBtn = document.getElementById('clearBtn');
+
+  // Utility: find the label element from an input
+  function findLabelForInput(inp){
+    return inp.closest('.opt');
+  }
+
+  // Toggle selected class on labels when inputs change
+  optLabels.forEach(label => {
+    const inp = label.querySelector('input');
+    if (!inp) return;
+
+    // Click on label focuses/activates input; keyboard accessibility
+    label.addEventListener('keydown', (ev) => {
+      if (ev.key === ' ' || ev.key === 'Enter') {
+        ev.preventDefault();
+        inp.click();
+      }
+    });
+
+    function updateVisual(){
+      if (inp.type === 'checkbox' || inp.type === 'radio'){
+        if (inp.checked) label.classList.add('selected');
+        else label.classList.remove('selected');
+      }
+    }
+    // initialize
+    updateVisual();
+
+    // when input changes, toggle and also reveal panels if needed
+    inp.addEventListener('change', (ev) => {
+      updateVisual();
+      // if input has data-target -> toggle that panel (top-level topics)
+      const target = inp.dataset.target;
+      if (target){
+        const panel = document.getElementById(target);
+        if (panel){
+          if (inp.checked){
+            panel.classList.add('open');
+            panel.setAttribute('aria-hidden','false');
+          } else {
+            panel.classList.remove('open');
+            panel.setAttribute('aria-hidden','true');
+            // also collapse any nested generation panels inside
+            panel.querySelectorAll('.panel.open').forEach(p => {
+              p.classList.remove('open');
+              p.setAttribute('aria-hidden','true');
+              // uncheck nested inputs? keep user's choice; we only hide it
+            });
+          }
+        }
+      }
+
+      // server brand -> reveal generation panel by data-gen
+      const gen = inp.dataset.gen;
+      if (gen){
+        const panel = document.getElementById(gen);
+        if (panel){
+          if (inp.checked){
+            panel.classList.add('open');
+            panel.setAttribute('aria-hidden','false');
+          } else {
+            panel.classList.remove('open');
+            panel.setAttribute('aria-hidden','true');
+            // leave generation checkboxes state intact (optional)
+          }
+        }
+      }
+    });
+  });
+
+  // Form data collection helper (collects checked values for a given name)
+  function collectValuesByName(name){
+    return Array.from(form.querySelectorAll(`[name="${name}"]`))
+      .filter(i => (i.type==='checkbox' || i.type==='radio') ? i.checked : true)
+      .map(i => i.value);
+  }
+
+  // Collect all preferences into a compact object
+  function collectPreferences(){
+    const prefs = {};
+    // topics
+    prefs.topics = collectValuesByName('topics');
+
+    // servers: which brands selected
+    prefs.server_brands = collectValuesByName('srv_brand');
+    // per-brand generations
+    prefs.hp_gen = collectValuesByName('hp_gen');
+    prefs.dell_gen = collectValuesByName('dell_gen');
+    prefs.lenovo_gen = collectValuesByName('lenovo_gen');
+
+    // storage / networking / components / devices
+    prefs.storage = collectValuesByName('storage');
+    prefs.networking = collectValuesByName('networking');
+    prefs.components = collectValuesByName('components');
+    prefs.devices = collectValuesByName('devices');
+
+    // applications
+    prefs.apps = collectValuesByName('apps');
+
+    // update types
+    prefs.updates = collectValuesByName('upd');
+
+    // planning info (radio = single value)
+    const purchase_when = form.querySelector('[name="purchase_when"]:checked');
+    const budget = form.querySelector('[name="budget"]:checked');
+    prefs.purchase_when = purchase_when ? purchase_when.value : '';
+    prefs.budget = budget ? budget.value : '';
+
+    // Add any other fields you need here (e.g. email if you add one)
+    return prefs;
+  }
+
+  // On submit: prepare PREFS_JSON and either POST or intercept & show debug
+  form.addEventListener('submit', function(ev){
+    // Build compact JSON
+    const prefs = collectPreferences();
+    const json = JSON.stringify(prefs);
+    prefHidden.value = json;
+
+    // If form action is empty, intercept to allow local testing and to see JSON
+    const action = (form.getAttribute('action') || '').trim();
+    if (!action){
+      ev.preventDefault();
+      console.log('PREFERENCES JSON (local test):', prefs);
+      // show a brief thank-you message
+      thankYou.classList.add('show');
+      // small visual feedback: scroll to message
+      thankYou.scrollIntoView({behavior:'smooth',block:'center'});
+      // Optionally send this payload to your server here via fetch()
+      // fetch('/save-prefs', {method:'POST', body: JSON.stringify(prefs), headers:{'content-type':'application/json'}});
+      return false;
+    }
+
+    // If action is present (Mailchimp) allow default submit.
+    // But ensure Mailchimp's field names are set to accept this hidden PREFS_JSON,
+    // or change to individual merge-tag hidden inputs above.
+    return true;
+  });
+
+  // Clear button: reset visual states
+  clearBtn.addEventListener('click', function(){
+    form.reset();
+    // remove .selected from all labels
+    document.querySelectorAll('.opt.selected').forEach(el => el.classList.remove('selected'));
+    // collapse all panels
+    document.querySelectorAll('.panel').forEach(p => {
+      p.classList.remove('open');
+      p.setAttribute('aria-hidden','true');
+    });
+    // hide thank-you
+    thankYou.classList.remove('show');
+  });
+
+  // Accessibility: if user tabs to label and presses Enter/Space we already handle it via keydown
+  // Additional: add small animation on selection via CSS class 'selected' (done above)
+
+  // Small enhancement: clicking a .opt label toggles the input (works natively),
+  // but we also ensure keyboard users have same experience (handled earlier).
+})();
+</script>
+</body>
+</html>
