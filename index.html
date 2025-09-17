@@ -387,8 +387,8 @@ p.lead {
           <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Hard Drives" /><div><div class="label">Hard Drives</div></div></label>
           <label class="opt" tabindex="0"><input type="checkbox" name="components" value="RAID Controllers" /><div><div class="label">RAID Controllers</div></div></label>
           <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Power Supplies" /><div><div class="label">Power Supplies</div></div></label>
-          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Rail Kits" /><div><div class="label">Rail Kits</div></div></label>
-          <label class="opt" tabindex="0"><input type="checkbox" name="components" value="Other" /><div><div class="label">Other</div></div></label>
+          <label class="opt small"><input type="checkbox" name="components" value="Rail Kits" /><div><div class="label">Rail Kits</div></div></label>
+          <label class="opt small"><input type="checkbox" name="components" value="Other" /><div><div class="label">Other</div></div></label>
         </div>
       </section>
       
@@ -546,18 +546,18 @@ p.lead {
   updateProgressBar();
 
   nextBtn.addEventListener('click', () => {
-    // Basic validation for the first step
+    // Check for "Not interested" as the ONLY selection
     if (currentStep === 0) {
       const serverOptions = document.querySelectorAll('input[name="servers"]');
-      const isServerSelected = Array.from(serverOptions).some(input => input.checked);
-      if (!isServerSelected) {
+      const selectedOptions = Array.from(serverOptions).filter(input => input.checked);
+
+      if (selectedOptions.length === 0) {
         alert('Please select at least one server type to continue.');
         return;
       }
 
-      // Check for 'Not interested in servers' and skip a step
-      const notInterestedInput = document.querySelector('input[value="Not interested"]');
-      if (notInterestedInput && notInterestedInput.checked) {
+      // If "Not interested" is the *only* option selected, skip to step 2
+      if (selectedOptions.length === 1 && selectedOptions[0].value === 'Not interested') {
         showStep(currentStep + 2, 'forward');
         return;
       }
